@@ -15,6 +15,7 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
 VITE_FIREBASE_APP_ID=your_firebase_app_id
 
 GOOGLE_APPLICATION_CREDENTIALS=./secrets/firebase-service-account.json
+FIREBASE_PROJECT_ID=your_project_id
 GROQ_API_KEY=
 GROQ_MODEL=openai/gpt-oss-20b
 PORT=3000
@@ -28,7 +29,12 @@ Do not place service-account JSON contents or Firebase private keys in `VITE_*` 
 2. Open Project settings > General > Your apps and copy the web config values.
 3. Enable Email/Password authentication in Authentication > Sign-in method.
 4. Create Firestore. The checked-in `firestore.rules` denies direct browser access to application documents. Authenticated application requests go through Express, which verifies Firebase ID tokens and enforces UID-based roles and section membership with the Admin SDK.
-5. Configure server-side Firebase Admin credentials using Application Default Credentials or `GOOGLE_APPLICATION_CREDENTIALS`. The server also uses `FIREBASE_PROJECT_ID`, `GCLOUD_PROJECT`, or `VITE_FIREBASE_PROJECT_ID` to select the project; it must match the web app project.
+5. Configure server-side Firebase Admin credentials using exactly one of:
+   - `FIREBASE_SERVICE_ACCOUNT_JSON`: the full service-account JSON object stored as a Render secret environment variable. Include the standard `type`, `project_id`, `client_email`, and `private_key` fields; keep it on one line as valid JSON or paste the formatted JSON supported by Render. Do not use a `VITE_` prefix.
+   - `GOOGLE_APPLICATION_CREDENTIALS`: a filesystem path to the service-account JSON file (for example, `./secrets/firebase-service-account.json`), or a path supported by Application Default Credentials.
+   - Application Default Credentials provided by the runtime.
+
+   If both explicit credential variables are set, initialization fails safely rather than choosing an ambiguous credential. Set `FIREBASE_PROJECT_ID` to the Firebase project ID when using Render; it must match the service-account `project_id` and the browser project's `VITE_FIREBASE_PROJECT_ID`. `GCLOUD_PROJECT` and `VITE_FIREBASE_PROJECT_ID` remain supported project-ID fallbacks. Firebase Admin uses the same initialized app for ID-token verification and Firestore.
 
 ## Student registration and profile provisioning
 

@@ -2,11 +2,15 @@ import 'dotenv/config';
 import admin from 'firebase-admin';
 import express from 'express';
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer as createHttpServer } from 'node:http';
 import { createServer as createViteServer } from 'vite';
+import {
+  FirebaseAdminConfigurationError,
+  initializeFirebaseAdmin,
+  verifyFirebaseIdToken,
+} from './src/lib/firebaseAdmin';
 import {
   canReadCourseSection,
   canWriteCourseSection,
@@ -42,21 +46,17 @@ let firebaseAdminApp: admin.app.App | null = null;
 try {
   const projectId = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || process.env.VITE_FIREBASE_PROJECT_ID;
   const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET;
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (credentialsPath && !existsSync(path.resolve(credentialsPath))) {
-    throw new Error('The configured GOOGLE_APPLICATION_CREDENTIALS file does not exist.');
-  }
-  const existingApp = admin.apps.find((candidate) => candidate?.name === '[DEFAULT]') ?? null;
-  if (existingApp && projectId && existingApp.options.projectId !== projectId) {
-    throw new Error('The initialized Firebase Admin project does not match the configured Firebase project.');
-  }
-  firebaseAdminApp = existingApp ?? admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    ...(projectId ? { projectId } : {}),
-    ...(storageBucket ? { storageBucket } : {}),
+  firebaseAdminApp = initializeFirebaseAdmin({
+    serviceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+    credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    projectId,
+    storageBucket,
   });
 } catch (error) {
-  console.error('Firebase Admin SDK initialization failed:', error instanceof Error ? error.message : 'Unknown initialization error');
+  const safeMessage = error instanceof FirebaseAdminConfigurationError
+    ? error.message
+    : 'Firebase Admin initialization failed due to invalid or unavailable server credentials.';
+  console.error('Firebase Admin SDK initialization failed:', safeMessage);
 }
 
 export { firebaseAdminApp };
@@ -248,7 +248,7 @@ const verifyFirebaseToken: express.RequestHandler = async (req, res, next) => {
     return;
   }
   try {
-    (req as FirebaseRequest).firebaseUser = await firebaseAdminApp.auth().verifyIdToken(tokenMatch[1], true);
+    (req as FirebaseRequest).firebaseUser = await verifyFirebaseIdToken(firebaseAdminApp.auth(), tokenMatch[1]);
     next();
   } catch (error) {
     const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'unknown';

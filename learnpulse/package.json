@@ -10,7 +10,7 @@
     "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "start": "tsx server.ts --production",
-    "test": "tsx --test src/lib/auth.test.ts src/lib/apiResponse.test.ts src/lib/courseState.test.ts src/lib/analytics.test.ts src/lib/academicManagement.test.ts src/lib/courseFiles.test.ts"
+    "test": "tsx --test src/lib/auth.test.ts src/lib/apiResponse.test.ts src/lib/courseState.test.ts src/lib/analytics.test.ts src/lib/academicManagement.test.ts src/lib/courseFiles.test.ts src/lib/firebaseAdmin.test.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
